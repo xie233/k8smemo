@@ -1,0 +1,32 @@
+#CA 证书
+openssl genrsa -out ca.key 2048
+cat<<EOF>openssl-ca.conf
+[ req ]
+default_bits            = 2048
+default_md              = sha256
+distinguished_name      = req_distinguished_name
+attributes              = req_attributes
+req_extensions = v3_req 
+[ req_distinguished_name ]
+[ req_attributes ]
+[ v3_req ]
+basicConstraints = critical,CA:true
+keyUsage = critical,Digital Signature, Key Encipherment, Certificate Sign
+EOF
+openssl x509 -req -in ca.csr -out ca.crt -signkey ca.key -days 5000   -extfile openssl-ca.conf -extensions v3_req
+
+#Server
+openssl genrsa -out server.key 2048
+penssl req -new -key server.key -subj "/CN=etcd-ca" -out server.csr
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 5000
+
+#Client
+openssl genrsa -out client.key 2048
+openssl req -new -key client.key -subj "/CN=etcd-ca" -out client.csr
+openssl x509 -req -in client.csr -CA ca.crt -CAcreateserial -out client.crt -days 5000
+
+#args
+--secure-port=443 --client-ca-file=/Users/jim/mykey/ca.crt --tls-private-key-file=/Users/jim/mykey/server.key --tls-cert-file=/Users/jim/mykey/server.crt --service-account-issuer=api --service-account-key-file=/Users/jim/mykey/server.key --service-account-signing-key-file=/Users/jim/mykey/server.key --etcd-servers=http://127.0.0.1:2379 
+
+
+etcdctl get / --prefix --keys-only
